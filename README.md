@@ -1,6 +1,6 @@
 # NorCal Fleet Summit logo review
 
-A single static page (GitHub Pages) where one invited reviewer rates the thirteen
+A single static page (GitHub Pages) where one invited reviewer rates the eighteen
 logo options 1 to 5 stars, picks favourites and leaves notes, then presses
 **Send my review**, which opens a pre-filled GitHub issue in this repo. Results live under Issues.
 
