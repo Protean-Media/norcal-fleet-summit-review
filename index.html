@@ -409,8 +409,9 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
     <h2>Almost done: press Submit on GitHub</h2>
     <p>A GitHub page opened in a new tab with your review filled in. Sign in if asked, then press
     <b>Create</b> (or <b>Submit new issue</b>) to finish.</p>
-    <p>If no tab opened, <a id="ghlink" href="#" target="_blank" rel="noopener">open it here</a>.
-    If GitHub says the review is too long, paste the copy below into that page instead.</p>
+    <p id="pastenote" hidden><b>Your review was long, so it has been copied for you.</b> On the GitHub page, click in the
+    box, select what is there, and paste (Ctrl+V, or Cmd+V on a Mac). If nothing pastes, press <b>Copy review</b> below first.</p>
+    <p>If no tab opened, <a id="ghlink" href="#" target="_blank" rel="noopener">open it here</a>.</p>
     <textarea id="summary" readonly aria-label="Your review"></textarea>
     <div class="acts"><button type="button" id="copy">Copy review</button><span id="copied" class="warn" aria-live="polite"></span></div>
   </section>
@@ -461,19 +462,16 @@ function progress() {
 }
 
 function summary() {
+  // Kept short on purpose: GitHub refuses a pre-filled link over about 8,000 characters.
   const who = state.who.trim() || "(no name given)";
   const picked = IDS.filter(id => state.items[id].picked);
-  const lines = ["**Reviewer:** " + who, "",
-    "**Picked:** " + (picked.length ? picked.map(id => id + " " + NAMES[id]).join(", ") : "none"), "",
-    "| Logo | Rating | Picked | Notes |", "|---|---|---|---|"];
+  const lines = ["Reviewer: " + who, "Picked: " + (picked.length ? picked.join(", ") : "none"), "",
+    "| Logo | Stars | Pick | Notes |", "|---|---|---|---|"];
   IDS.forEach(id => {
     const it = state.items[id];
-    const stars = it.stars ? "\u2605".repeat(it.stars) + "\u2606".repeat(5 - it.stars) + " " + it.stars + "/5" : "not rated";
     const note = it.note.trim().replace(/\s*\n\s*/g, " / ").replace(/\|/g, "/");
-    lines.push("| " + id + " " + NAMES[id] + " | " + stars + " | " + (it.picked ? "Yes" : "") + " | " + note + " |");
+    lines.push("| " + id + " " + NAMES[id] + " | " + (it.stars ? it.stars + "/5" : "-") + " | " + (it.picked ? "Yes" : "") + " | " + note + " |");
   });
-  const data = {who: state.who.trim(), items: state.items};
-  lines.push("", "<details><summary>Data</summary>", "", "```json", JSON.stringify(data), "```", "", "</details>");
   return lines.join("\n");
 }
 
@@ -504,7 +502,15 @@ sendBtn.addEventListener("click", () => {
   document.getElementById("summary").value = text;
   const done = document.getElementById("done"); done.hidden = false;
   const title = "Logo review" + (state.who.trim() ? " from " + state.who.trim() : "");
-  const url = "https://github.com/" + REPO + "/issues/new?title=" + encodeURIComponent(title) + "&body=" + encodeURIComponent(text);
+  const base = "https://github.com/" + REPO + "/issues/new?title=" + encodeURIComponent(title) + "&body=";
+  let url = base + encodeURIComponent(text);
+  const note = document.getElementById("pastenote");
+  if (url.length > 7000) {
+    // too long for a link: copy the review and open GitHub with a paste prompt
+    try { navigator.clipboard.writeText(text); } catch (e) {}
+    url = base + encodeURIComponent("(Paste the review here: it has been copied for you. Press Ctrl+V, or Cmd+V on a Mac.)");
+    note.hidden = false;
+  } else { note.hidden = true; }
   document.getElementById("ghlink").href = url;
   window.open(url, "_blank", "noopener");
   done.scrollIntoView({behavior: "smooth", block: "start"});
