@@ -2,7 +2,7 @@
 
 A single static page (GitHub Pages) where one invited reviewer rates the eighteen
 logo options 1 to 5 stars, picks favourites and leaves notes, then presses
-**Send my review**, which opens a pre-filled GitHub issue in this repo. Results live under Issues.
+**Send my review**, which saves the review straight into a Google Form response (no sign-in). Results are in the linked Google Sheet.
 
 - No tracking, no network requests, no fonts loaded: logos are inline outlined SVG.
 - Progress is kept in the reviewer's own browser (localStorage) until they send.

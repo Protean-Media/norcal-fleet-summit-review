@@ -77,7 +77,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
     <h1>NorCal Fleet Summit logos</h1>
     <p class="lede">Eighteen logo options, each shown on a light and a dark background. Give each one 1 to 5 stars,
     press <b>Pick</b> on any you would choose, and add notes wherever you have a thought. When you're finished, press
-    <b>Send my review</b> at the bottom: it opens GitHub with your review filled in. Your work is kept in this browser until then, so you can come back to it.</p>
+    <b>Send my review</b> at the bottom, and that's it. Your work is kept in this browser until then, so you can come back to it.</p>
     <div class="who"><label for="who">Your name</label><input id="who" type="text" autocomplete="name" placeholder="So we know who this is from"></div>
   </header>
   <main class="grid">
@@ -406,14 +406,12 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
   </div>
 </article></main>
   <section class="done" id="done" hidden aria-live="polite">
-    <h2>Almost done: press Submit on GitHub</h2>
-    <p>A GitHub page opened in a new tab with your review filled in. Sign in if asked, then press
-    <b>Create</b> (or <b>Submit new issue</b>) to finish.</p>
-    <p id="pastenote" hidden><b>Your review was long, so it has been copied for you.</b> On the GitHub page, click in the
-    box, select what is there, and paste (Ctrl+V, or Cmd+V on a Mac). If nothing pastes, press <b>Copy review</b> below first.</p>
-    <p>If no tab opened, <a id="ghlink" href="#" target="_blank" rel="noopener">open it here</a>.</p>
-    <textarea id="summary" readonly aria-label="Your review"></textarea>
-    <div class="acts"><button type="button" id="copy">Copy review</button><span id="copied" class="warn" aria-live="polite"></span></div>
+    <h2 id="donehead">Saving your review&hellip;</h2>
+    <p id="donemsg"></p>
+    <div id="fallback" hidden>
+      <textarea id="summary" readonly aria-label="Your review"></textarea>
+      <div class="acts"><button type="button" id="copy">Copy review</button><span id="copied" class="warn" aria-live="polite"></span></div>
+    </div>
   </section>
 </div>
 <div class="bar"><div class="in">
@@ -424,7 +422,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
 <script>
 const NAMES = {"F01": "Albert Summit", "F01Y": "Albert Summit, yellow FLEET SUMMIT", "F02": "Archivo Band", "F02Y": "Archivo Band, yellow FLEET SUMMIT", "F13": "Mountain Bars", "F13Y": "Mountain Bars, yellow FLEET SUMMIT", "F14": "04 Stacked", "F14Y": "04 Stacked, yellow FLEET SUMMIT", "F14L": "04 Stacked, icon left", "F19": "Contour Stack", "F19L": "Contour Stack, icon left", "F20": "Contour Night", "F22": "Range", "F22L": "Range, icon left", "F25": "Signal Peaks", "F25L": "Signal Peaks, icon left", "F31": "Signal Peaks Night", "F31L": "Signal Peaks Night, icon left"};
 const IDS = Object.keys(NAMES);
-const REPO = "Protean-Media/norcal-fleet-summit-review";
+const FORM = "1FAIpQLSd9At6fm2zTzDXU07TYWdRSlsohNawpSTxelo6UkDmwM4o_bQ", FIELD = "953228909";   // the review is saved as one Google Form response
 const KEY = "nfs-logo-review-v1";
 const state = {who: "", items: {}};
 IDS.forEach(id => state.items[id] = {stars: 0, picked: false, note: ""});
@@ -462,15 +460,13 @@ function progress() {
 }
 
 function summary() {
-  // Kept short on purpose: GitHub refuses a pre-filled link over about 8,000 characters.
   const who = state.who.trim() || "(no name given)";
   const picked = IDS.filter(id => state.items[id].picked);
-  const lines = ["Reviewer: " + who, "Picked: " + (picked.length ? picked.join(", ") : "none"), "",
-    "| Logo | Stars | Pick | Notes |", "|---|---|---|---|"];
+  const lines = ["Reviewer: " + who, "Picked: " + (picked.length ? picked.join(", ") : "none"), ""];
   IDS.forEach(id => {
     const it = state.items[id];
-    const note = it.note.trim().replace(/\s*\n\s*/g, " / ").replace(/\|/g, "/");
-    lines.push("| " + id + " " + NAMES[id] + " | " + (it.stars ? it.stars + "/5" : "-") + " | " + (it.picked ? "Yes" : "") + " | " + note + " |");
+    const note = it.note.trim().replace(/\s*\n\s*/g, " / ");
+    lines.push(id + " " + NAMES[id] + ": " + (it.stars ? it.stars + "/5" : "not rated") + (it.picked ? ", PICKED" : "") + (note ? " - " + note : ""));
   });
   return lines.join("\n");
 }
@@ -500,20 +496,27 @@ sendBtn.addEventListener("click", () => {
   hint.textContent = "";
   const text = summary();
   document.getElementById("summary").value = text;
-  const done = document.getElementById("done"); done.hidden = false;
-  const title = "Logo review" + (state.who.trim() ? " from " + state.who.trim() : "");
-  const base = "https://github.com/" + REPO + "/issues/new?title=" + encodeURIComponent(title) + "&body=";
-  let url = base + encodeURIComponent(text);
-  const note = document.getElementById("pastenote");
-  if (url.length > 7000) {
-    // too long for a link: copy the review and open GitHub with a paste prompt
-    try { navigator.clipboard.writeText(text); } catch (e) {}
-    url = base + encodeURIComponent("(Paste the review here: it has been copied for you. Press Ctrl+V, or Cmd+V on a Mac.)");
-    note.hidden = false;
-  } else { note.hidden = true; }
-  document.getElementById("ghlink").href = url;
-  window.open(url, "_blank", "noopener");
+  const done = document.getElementById("done"), head = document.getElementById("donehead"),
+        msg = document.getElementById("donemsg"), fb = document.getElementById("fallback");
+  done.hidden = false; fb.hidden = true;
+  head.textContent = "Saving your review\u2026"; msg.textContent = "";
+  sendBtn.disabled = true;
   done.scrollIntoView({behavior: "smooth", block: "start"});
+  const body = new URLSearchParams();
+  body.append("entry." + FIELD, text + "\n\nDATA " + JSON.stringify({v: 1, who: state.who.trim(), items: state.items, at: new Date().toISOString()}));
+  // Google Forms accepts anonymous submissions; the reply is opaque (no-cors), so a
+  // completed request is the success signal and only a network failure is an error.
+  fetch("https://docs.google.com/forms/d/e/" + FORM + "/formResponse", {method: "POST", mode: "no-cors", body: body})
+    .then(() => {
+      head.textContent = "Saved. Thank you!";
+      msg.textContent = "Your review has been saved. You can close this page. If you change anything, press Send my review again and the newer one will be saved too.";
+    })
+    .catch(() => {
+      head.textContent = "That didn't save";
+      msg.textContent = "Please check your internet connection and press Send my review again. If it still won't save, press Copy review and email it to Eric.";
+      fb.hidden = false;
+    })
+    .finally(() => { sendBtn.disabled = false; });
 });
 document.getElementById("copy").addEventListener("click", async () => {
   const ta = document.getElementById("summary"), msg = document.getElementById("copied");
